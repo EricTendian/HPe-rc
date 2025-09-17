@@ -538,8 +538,8 @@ class HP_DEBUG(cmd.Cmd):
     def do_send(self, line):
         """send
         Send string to scanner and read response."""
-        ser1.write(line)
-        ser1.write('\r')
+        write_serial(ser1, line)
+        write_serial(ser1, '\r')
         rs=r2r(ser1)
         logging.info(rs)
  
@@ -551,8 +551,8 @@ class HP_DEBUG(cmd.Cmd):
     def do_debugmode(self,line):
         """debugmode
         Start HP-1 debug mode. Reset scanner to return to normal operation."""
-        ser1.write('\t'.join(['cdb','2']))
-        ser1.write('\r')
+        write_serial(ser1, '\t'.join(['cdb','2']))
+        write_serial(ser1, '\r')
         rs=r2r(ser1)
         print(rs)
         while True:
@@ -562,8 +562,8 @@ class HP_DEBUG(cmd.Cmd):
             except KeyboardInterrupt:         
                 print()
                 ser1.flushInput()
-                ser1.write('RDB')
-                ser1.write('\r')
+                write_serial(ser1, 'RDB')
+                write_serial(ser1, '\r')
                 ser1.flushInput()
                 time.sleep(1)
                 rs=r2r(ser1, flush=True)
@@ -903,6 +903,13 @@ def command(cmd, *args, **kwargs):
         base = ''.join(['\t'.join([str(x) for x in args[0]]),'\t'])
     return ''.join([base, flag and flag or checksum(base),'\r'])
 
+def write_serial(ser, data):
+    """Write string data to serial port as bytes"""
+    if isinstance(data, str):
+        write_serial(ser, data.encode('utf-8'))
+    else:
+        write_serial(ser, data)
+
 def checkerr(*args, **kwargs):
     error=False
     display=kwargs.get('display', True)
@@ -1127,17 +1134,17 @@ def HP_open(port1, port2):
 
 def HP_screencap(ser):
     logging.debug('CMD : Capture Screenshot')
-    ser.write(command('cdb','C', flag='1')) # cdb<tab>C<tab>1<enter>
+    write_serial(ser, command('cdb','C', flag='1')) # cdb<tab>C<tab>1<enter>
     rs=r2r(ser)
     if not checkerr(rs):
-        ser.write('cap\r')
+        write_serial(ser, 'cap\r')
         ok()
 
 def HP_checksum(ser, status):
     logging.debug('CMD : Checksum')
     if status.upper() in ['','ON','OFF']:
         flag=digit_switch(status.upper())
-        ser.write(command('cdb','M', flag=flag))    
+        write_serial(ser, command('cdb','M', flag=flag))    
         rs=r2r(ser)
         if not checkerr(rs):
             ok()
@@ -1156,14 +1163,14 @@ def HP_fav_list(ser, cmd='', display=True):
     if index != None:
         status=args[1].upper()
         if 0 <= index <= 256 and status in ['ON','OFF']:
-            ser.write(command('RMT', 'HFAV', str(index), status))
+            write_serial(ser, command('RMT', 'HFAV', str(index), status))
             rs=r2r(ser)
         else:
             logging.error('Invalid Parameter')
     else:   
         favorites={}
         for x in range(0,256):
-            ser.write(command('RMT', 'HFAV', str(x)))
+            write_serial(ser, command('RMT', 'HFAV', str(x)))
             rs=r2r(ser)
             if not checkerr(rs) and (rs[3]!='' and rs[4]!=''):
                 favorites[str(x).zfill(3)]={'name':rs[4], 'status':rs[3]}
@@ -1175,10 +1182,10 @@ def HP_fav_list(ser, cmd='', display=True):
 def HP_program_mode(ser, enter=True, display=True):
     if enter:
         logging.debug('CMD : Enter Program Mode')
-        ser.write(command('RMT','PRG'))
+        write_serial(ser, command('RMT','PRG'))
     else:
         logging.debug('CMD : Exit Program Mode')
-        ser.write(command('RMT','EPG'))
+        write_serial(ser, command('RMT','EPG'))
     rs=r2r(ser)
     if not checkerr(rs) and display:
         ok()
@@ -1186,7 +1193,7 @@ def HP_program_mode(ser, enter=True, display=True):
 
 def HP_any_cmd(ser, line='RMT MODEL', display=True):
     logging.debug(''.join(['CMD : ',line]))
-    ser.write(command(None, line.upper().split()))
+    write_serial(ser, command(None, line.upper().split()))
     rs = r2r(ser)
     if not checkerr(rs, display=display):
         if display:
@@ -1194,7 +1201,7 @@ def HP_any_cmd(ser, line='RMT MODEL', display=True):
 
 def HP_replay_cmd(ser, type='NEXT', display=True):
     logging.debug(''.join(['CMD : Replay ',type]))
-    ser.write(command('RMT','REP',type))
+    write_serial(ser, command('RMT','REP',type))
     rs = r2r(ser)
     if not checkerr(rs, display=display):
         if display:
@@ -1207,13 +1214,13 @@ def HP_cmd_0_15(ser, val=8, type='VOL', display=True):
         value=-1
     if 0 <= value <= 15:    
         logging.debug(''.join(['CMD : Set ',type,' ','(',str(val),')']))
-        ser.write(command('RMT',type,str(val)))
+        write_serial(ser, command('RMT',type,str(val)))
         rs = r2r(ser)
         if not checkerr(rs, display=display) and display:
             ok()
     elif value==-1:
         logging.debug(''.join(['CMD : Get ',type,]))
-        ser.write(command('RMT',type))
+        write_serial(ser, command('RMT',type))
         #rs = response(ser.readline())
         rs = r2r(ser)
         if not checkerr(rs, display=display):
@@ -1230,9 +1237,9 @@ def HP_cmd_on_off(ser,status=None,type='MUTE', cmd='RMT', display=True):
             status=None
         logging.debug(''.join(['CMD : Set/Get',' ',type,' ','(',str(status),')'])) 
         if status:
-            ser.write(command(cmd,type,status.upper()))
+            write_serial(ser, command(cmd,type,status.upper()))
         else:
-            ser.write(command(cmd,type)) 
+            write_serial(ser, command(cmd,type)) 
         rs = r2r(ser)
         if not checkerr(rs, display=display):
             if status==None:
@@ -1290,13 +1297,13 @@ def HP_audio_feed(ser, display=True, web_mode=False):
         try:
             while bool(filename):
                 logging.debug('CMD : Get Audio Info')
-                ser.write(command('AUF','INFO'))
+                write_serial(ser, command('AUF','INFO'))
                 rs=r2r(ser)
                 if not checkerr(rs) and len(rs)>=4:
                     filename=rs[2]
                     filesize=rs[3]
                     filedate=rs[4]
-                    ser.write(command('AUF','INFO','ACK'))
+                    write_serial(ser, command('AUF','INFO','ACK'))
                 else:
                     filename=''
                 if bool(filename):
@@ -1311,9 +1318,9 @@ def HP_audio_feed(ser, display=True, web_mode=False):
                     buffer=''
                     while block != 'EOT':
                         if not data:
-                            ser.write(command('AUF','DATA'))
+                            write_serial(ser, command('AUF','DATA'))
                         else:
-                            ser.write(command('AUF','DATA','ACK'))
+                            write_serial(ser, command('AUF','DATA','ACK'))
                         rs=r2r(ser)
                         if not checkerr(rs):
                             block=rs[2]
@@ -1324,7 +1331,7 @@ def HP_audio_feed(ser, display=True, web_mode=False):
                                 except:
                                     print()
                                     logging.error('Invalid Data Received.')
-                                    ser.write(command('AUF','DATA','CAN'))
+                                    write_serial(ser, command('AUF','DATA','CAN'))
                                     return
                                 if blk==1 and buffer=='':
                                     status= wav_meta(data.decode('hex').split('fmt ', 1)[0])
@@ -1353,7 +1360,7 @@ def HP_audio_feed(ser, display=True, web_mode=False):
                                 buffer += data.decode('hex')
                         else:
                             break
-                    ser.write(command('AUF','DATA','ACK'))
+                    write_serial(ser, command('AUF','DATA','ACK'))
                     print('{0: <25}\r'.format('\r'), end='')
                     wav.write(buffer)
                     wav.close()
@@ -1371,7 +1378,7 @@ def HP_audio_feed(ser, display=True, web_mode=False):
             loop = False
             ser.flushInput()
             logging.warning('Feed Mode aborted.')
-            ser.write(command('AUF','DATA','CAN'))
+            write_serial(ser, command('AUF','DATA','CAN'))
             ser1.flushInput()
             rs = response(ser.readline())
             checkerr(rs)
@@ -1379,27 +1386,27 @@ def HP_audio_feed(ser, display=True, web_mode=False):
                 wav.close()
             except:
                 pass
-    ser.write(command('AUF','STS','OFF'))
+    write_serial(ser, command('AUF','STS','OFF'))
     rs = response(ser.readline())
     checkerr(rs)
       
 def HP_scanmode(ser, display=True):
     logging.debug(''.join(['CMD : Set Scan Mode']))
-    ser.write(command('RMT','JPM','SCN_MODE'))
+    write_serial(ser, command('RMT','JPM','SCN_MODE'))
     if not checkerr(response(ser.readline()), display=display):
         if display:
             ok()
 
 def HP_replaymode(ser, display=True):
     logging.debug(''.join(['CMD : Set Replay Mode']))
-    ser.write(command('RMT','JPM','REP_MODE'))
+    write_serial(ser, command('RMT','JPM','REP_MODE'))
     if not checkerr(response(ser.readline()), display=display): 
         if display:
             ok()
 
 def HP_model(ser):
     logging.debug('CMD : Get Model')
-    ser.write(command('RMT','MODEL'))
+    write_serial(ser, command('RMT','MODEL'))
     rs = r2r(ser, timeout=2)
     if not checkerr(rs):
         return rs[2]
@@ -1407,7 +1414,7 @@ def HP_model(ser):
 
 def HP_version(ser):
     logging.debug('CMD : Get Version')
-    ser.write(command('RMT','VERSION'))
+    write_serial(ser, command('RMT','VERSION'))
     rs = r2r(ser)
     if not checkerr(rs):
         return rs[2],rs[3],rs[4]
@@ -1415,7 +1422,7 @@ def HP_version(ser):
 
 def HP_status(ser, display=True):
     logging.debug('CMD : Get Status')
-    ser.write(command('RMT','STATUS'))
+    write_serial(ser, command('RMT','STATUS'))
     rs = r2r(ser)
     if not checkerr(rs, display=display):
         return rs
@@ -1637,7 +1644,7 @@ def HP_monitor(ser):
     
 def HP_rep_status(ser, display=True):
     logging.debug('CMD : Get Replay Status')
-    ser.write(command('RMT','REP_STATUS'))
+    write_serial(ser, command('RMT','REP_STATUS'))
     rs = r2r(ser)
     if not checkerr(rs, display=display):
         return rs
@@ -1645,18 +1652,18 @@ def HP_rep_status(ser, display=True):
     
 def HP_rawmode(ser,freq=162500000,mode='AUTO',att='OFF',filter='OFF'):
     logging.debug('CMD : Set Raw Mode')
-    ser.write(command('RMT','SFREQ'))
+    write_serial(ser, command('RMT','SFREQ'))
     rs = response(ser.readline())
     if checkerr(rs, display=False):
         pass #Raw mode may already be set - try parameters before bailing out
     logging.debug('CMD : Set Raw Mode Parameters')    
     try:
         if float(config['firmware']) >= 2.03:
-            ser.write(command('RMT','SFREQ',str(freq),mode,att,filter))
+            write_serial(ser, command('RMT','SFREQ',str(freq),mode,att,filter))
         else:
-            ser.write(command('RMT','SFREQ',str(freq),mode,att))
+            write_serial(ser, command('RMT','SFREQ',str(freq),mode,att))
     except:
-        ser.write(command('RMT','SFREQ',str(freq),mode,att))
+        write_serial(ser, command('RMT','SFREQ',str(freq),mode,att))
     rs = response(ser.readline())
     if checkerr(rs):
         return False
@@ -1700,7 +1707,7 @@ def HP_rawread(ser1,ser2=None,file=None, record_time=0, timeout=3, dump=False, s
             set_config('rd_input', None)
     else:
         logging.debug('CMD : Start Raw Mode')
-        ser1.write(command('RMT','SFREQ','START'))
+        write_serial(ser1, command('RMT','SFREQ','START'))
     if file=='ON':
         filename = check_path(config['rd_path'], '.'.join([fn_dt(datetime.datetime.now(), format=config['dateformat']),wav and 'wav' or 'dat']))
         if wav:
@@ -1778,7 +1785,7 @@ def HP_rawread(ser1,ser2=None,file=None, record_time=0, timeout=3, dump=False, s
                             los=avg
                         bb = (bb << (level / 2)) + data_slice(avg, level=level)
                     if ser2:
-                        ser2.write(struct.pack('B', bb))
+                        write_serial(ser2, struct.pack('B', bb))
                         if file=='ON':
                             if not wav:
                                 o_f.write(struct.pack('B', bb))
@@ -1829,7 +1836,7 @@ def HP_rawread(ser1,ser2=None,file=None, record_time=0, timeout=3, dump=False, s
         i_f.close()
     else:
         logging.debug('CMD : Stop Raw Mode')
-        ser1.write(command('RMT','SFREQ','STOP'))
+        write_serial(ser1, command('RMT','SFREQ','STOP'))
         time.sleep(1)
         ser1.flushInput()
 
