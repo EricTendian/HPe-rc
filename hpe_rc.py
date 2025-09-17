@@ -906,9 +906,9 @@ def command(cmd, *args, **kwargs):
 def write_serial(ser, data):
     """Write string data to serial port as bytes"""
     if isinstance(data, str):
-        write_serial(ser, data.encode('utf-8'))
+        ser.write(data.encode('utf-8'))
     else:
-        write_serial(ser, data)
+        ser.write(data)
 
 def checkerr(*args, **kwargs):
     error=False
