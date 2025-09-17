@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2013 Joseph W. Metcalf
 #
@@ -15,9 +15,10 @@
 
 import sys, io, os
 import string
-import ConfigParser
+import configparser
 import argparse
-import urlparse
+import urllib.parse
+from functools import reduce
 import time, datetime
 import serial
 import logging
@@ -28,7 +29,7 @@ import json
 import wave
 import hashlib
 import threading
-import Queue
+import queue
 import util
 import defs
 
@@ -70,10 +71,10 @@ COMPARE_SYSTEM = ['status','channel','channel_hold','channel_avoid','department'
 
 HASH_ITEMS=['frequency','channel','channel_hold','channel_avoid','department','department_hold','department_avoid','system','system_hold','system_avoid','signal','uid','status','replay_status']   
 
-queue=Queue.Queue()
+queue=queue.Queue()
 
 def ok():
-    print 'Ok.'
+    print('Ok.')
 
 def idle(base=0.1):
     time.sleep(base)
@@ -135,7 +136,7 @@ def build_status(list, mapping, **kwargs):
                     system[key] = None
             else:
                 system[key] = None
-        for key, value in kwargs.iteritems():
+        for key, value in kwargs.items():
             system[key] = value
         system['time']=str(int(time.time()))
         try:
@@ -259,7 +260,7 @@ def set_config(key,value,verbose=True):
     if step or none:
         config[key]=step
         if verbose:
-            print ' '.join(['Ok:',key,'=',str(step)])
+            print(' '.join(['Ok:',key,'=',str(step)]))
     
     if key=='loglevel':
         logging.getLogger().setLevel(int(config['loglevel']))
@@ -441,8 +442,8 @@ def web_server(command='start', port=8000):
    
     class server_thread(threading.Thread):
         def run(self):
-            print
-            print 'Starting Web Server...'
+            print()
+            print('Starting Web Server...')
             try:
                 httpd.serve_forever(poll_interval=0.5)
             except Exception as detail:
@@ -450,9 +451,9 @@ def web_server(command='start', port=8000):
                 httpd.socket.close()
     
     if httpd and command=='stop':
-        print
-        print 'Stopping Web Server...'
-        print
+        print()
+        print('Stopping Web Server...')
+        print()
         threading.Thread(target=httpd.shutdown).start()
         httpd=None
     
@@ -477,15 +478,15 @@ class HP_PROGRAM(cmd.Cmd):
         pass
         
     def postcmd(self, stop, line):
-        print
+        print()
         return cmd.Cmd.postcmd(self, stop, line)
     
     def precmd(self, line):
-        print
+        print()
         return cmd.Cmd.precmd(self, line)
    
     def help_help(self):
-        print 'Type help [topic] for more information on commands and operation.'
+        print('Type help [topic] for more information on commands and operation.')
 
     def do_exit(self,line):
         """exit
@@ -514,15 +515,15 @@ class HP_DEBUG(cmd.Cmd):
         pass
         
     def postcmd(self, stop, line):
-        print
+        print()
         return cmd.Cmd.postcmd(self, stop, line)
     
     def precmd(self, line):
-        print
+        print()
         return cmd.Cmd.precmd(self, line)
    
     def help_help(self):
-        print 'Type help [topic] for more information on commands and operation.'
+        print('Type help [topic] for more information on commands and operation.')
 
     def do_exit(self,line):
         """exit
@@ -553,20 +554,20 @@ class HP_DEBUG(cmd.Cmd):
         ser1.write('\t'.join(['cdb','2']))
         ser1.write('\r')
         rs=r2r(ser1)
-        print rs
+        print(rs)
         while True:
             try:
                 rs=r2r(ser1)
-                print rs[0]
+                print(rs[0])
             except KeyboardInterrupt:         
-                print
+                print()
                 ser1.flushInput()
                 ser1.write('RDB')
                 ser1.write('\r')
                 ser1.flushInput()
                 time.sleep(1)
                 rs=r2r(ser1, flush=True)
-                print rs
+                print(rs)
                 break
 
 class HP_REPLAY(cmd.Cmd):
@@ -583,15 +584,15 @@ class HP_REPLAY(cmd.Cmd):
         pass
         
     def postcmd(self, stop, line):
-        print
+        print()
         return cmd.Cmd.postcmd(self, stop, line)
     
     def precmd(self, line):
-        print
+        print()
         return cmd.Cmd.precmd(self, line)
    
     def help_help(self):
-        print 'Type help [topic] for more information on commands and operation.'
+        print('Type help [topic] for more information on commands and operation.')
     
     def do_status(self, line):
         """status
@@ -644,11 +645,11 @@ class HP_CMD(cmd.Cmd):
         pass
         
     def postcmd(self, stop, line):
-        print
+        print()
         return cmd.Cmd.postcmd(self, stop, line)
         
     def precmd(self, line):     
-        print
+        print()
         if self.parseline(line)[0] in OPEN_CMD:
             if not ser1:
                 logging.error('HomePatrol must be connected to use this command.')
@@ -656,13 +657,13 @@ class HP_CMD(cmd.Cmd):
         return cmd.Cmd.precmd(self, line)
     
     def help_help(self):
-        print 'Type help [topic] for more information on commands and operation.'
+        print('Type help [topic] for more information on commands and operation.')
 
     def do_help(self, line):
         cmd.Cmd.do_help(self, line)
         if line in OPEN_CMD:
-            print
-            print '        {0}'.format('Note: HomePatrol must be connected to use this command.')
+            print()
+            print('        {0}'.format('Note: HomePatrol must be connected to use this command.'))
  
     def do_save(self,line):
         """save [name]
@@ -700,7 +701,7 @@ class HP_CMD(cmd.Cmd):
     def do_version(self,line):
         """version
         Display program information"""
-        print version_string() 
+        print(version_string()) 
        
     def do_set(self, line):
         """set parameter=[value] ...
@@ -722,10 +723,10 @@ class HP_CMD(cmd.Cmd):
         List all matching parameters.
         Use get without an option for a full list of parameters. """    
         if line:
-            print ''.join(['Parameters Matching [',line,']'])
+            print(''.join(['Parameters Matching [',line,']']))
         else:
-            print 'Available Parameters:'
-        print
+            print('Available Parameters:')
+        print()
         for key in OK_VAR:
             if key in OOO_VAR:
                 args = '[ON|OFF]'
@@ -741,10 +742,10 @@ class HP_CMD(cmd.Cmd):
                 args = '[String]'
             if line:
                 if key.find(line) != -1:
-                    print '{0: <62} {1: <15}'.format('='.join([key, str(config[key])])[:61], args)
+                    print('{0: <62} {1: <15}'.format('='.join([key, str(config[key])])[:61], args))
             else:
                 try:
-                    print '{0: <62} {1: <15}'.format('='.join([key, str(config[key])])[:61], args)
+                    print('{0: <62} {1: <15}'.format('='.join([key, str(config[key])])[:61], args))
                 except:
                     pass
         
@@ -989,34 +990,34 @@ def format_system(system, monitor=False, header=True, systems=True, delay=2, oth
     if header:
         for (item,alt) in zip(COMMON_SYSTEM, ALT_SYSTEM):
             if item==alt or not monitor:
-                print '{0: <25}'.format(item.upper()),
+                print('{0: <25}'.format(item.upper()), end=' ')
             else:
-                print '{0: <25}'.format('/'.join([item.upper(),alt.upper()])),
-        print
+                print('{0: <25}'.format('/'.join([item.upper(),alt.upper()])), end=' ')
+        print()
     if systems:
         for key in display_system:
             if system[key]:
                 offset = 0
-                print '{0}{1: <25}'.format('', format_data(system, key)[offset:24+offset]),
+                print('{0}{1: <25}'.format('', format_data(system, key)[offset:24+offset]), end=' ')
             else:
-                print '{0}{1: <25}'.format('', '---'),
+                print('{0}{1: <25}'.format('', '---'), end=' ')
     if monitor:
-        print '\r',
+        print('\r', end='')
     else:
-        print
+        print()
         if system['service_tag'] and system['frequency']:
-            print
-            print format_data(system, 'frequency'),
+            print()
+            print(format_data(system, 'frequency'), end=' ')
         if system['nac'] and system['nac'] !='NONE':
-            print
-            print format_data(system, 'nac'),
+            print()
+            print(format_data(system, 'nac'), end=' ')
         elif system['subtone']:
-            print
-            print format_data(system, 'subtone'),  
+            print()
+            print(format_data(system, 'subtone'), end=' ')  
         if system['uid']:
-            print
-            print format_data(system, 'uid'),
-        print
+            print()
+            print(format_data(system, 'uid'), end=' ')
+        print()
  
 def format_data(system,type):
         if type=='frequency':
@@ -1070,7 +1071,7 @@ def HP_open(port1, port2):
             for p in AUTO_PORT[platform.system()]:
                 try:
                     ser1 = serial.Serial(p, config['port1_baud'], timeout=0.5, writeTimeout=2)
-                    print ' '.join(['Trying',p,'...'])
+                    print(' '.join(['Trying',p,'...']))
                     model=HP_model(ser1)
                     if model:
                         config['port1']=p
@@ -1079,7 +1080,7 @@ def HP_open(port1, port2):
                         ser1.close()
                 except:
                     pass
-            print
+            print()
         except:
             logging.error('Unable to detect serial port.')
             port1=None
@@ -1167,7 +1168,7 @@ def HP_fav_list(ser, cmd='', display=True):
             if not checkerr(rs) and (rs[3]!='' and rs[4]!=''):
                 favorites[str(x).zfill(3)]={'name':rs[4], 'status':rs[3]}
                 if display:
-                    print '{0: <3} {1: >3} {2: <25}'.format(x,rs[3],rs[4])
+                    print('{0: <3} {1: >3} {2: <25}'.format(x,rs[3],rs[4]))
             else:
                 break
 
@@ -1217,7 +1218,7 @@ def HP_cmd_0_15(ser, val=8, type='VOL', display=True):
         rs = r2r(ser)
         if not checkerr(rs, display=display):
             if display:
-                print ''.join([type,' is ',rs[2],'.'])
+                print(''.join([type,' is ',rs[2],'.']))
             else:
                 return rs[2]
     else:
@@ -1236,7 +1237,7 @@ def HP_cmd_on_off(ser,status=None,type='MUTE', cmd='RMT', display=True):
         if not checkerr(rs, display=display):
             if status==None:
                 if display:
-                    print ''.join([type,' is ',rs[2],'.'])
+                    print(''.join([type,' is ',rs[2],'.']))
                 else:
                     return rs[2]
             else:
@@ -1303,8 +1304,8 @@ def HP_audio_feed(ser, display=True, web_mode=False):
                     newfilename = '.'.join([fn_dt(filedatetime, format=config['dateformat']),'wav'])
                     jsonfile = '.'.join([fn_dt(filedatetime, format=config['dateformat']),'json'])
                     if display:
-                        print '{0: <25} {1: <25} {2: <25}'.format('Download Audio File',newfilename,' '.join([filesize,'bytes']))
-                        print
+                        print('{0: <25} {1: <25} {2: <25}'.format('Download Audio File',newfilename,' '.join([filesize,'bytes'])))
+                        print()
                     block='0'
                     data=None
                     buffer=''
@@ -1321,7 +1322,7 @@ def HP_audio_feed(ser, display=True, web_mode=False):
                                 try:
                                     blk=int(block)
                                 except:
-                                    print
+                                    print()
                                     logging.error('Invalid Data Received.')
                                     ser.write(command('AUF','DATA','CAN'))
                                     return
@@ -1331,7 +1332,7 @@ def HP_audio_feed(ser, display=True, web_mode=False):
                                     d_system = build_status(status, SCAN_STATUS, hp_mode='feed')
                                     format_system(d_system, monitor=True, header=not web_mode)                                    
                                     if display:
-                                        print
+                                        print()
                                     path='.'
                                     if config['feed_path']:
                                         path=var_sub(config['feed_path'], build_status(status, SCAN_STATUS))
@@ -1347,26 +1348,26 @@ def HP_audio_feed(ser, display=True, web_mode=False):
                                     if len(data)==4096:
                                         complete=float(len(buffer)) / float(filesize) * 100
                                         if display:
-                                            print '\r{0:4.1f}%'.format(complete),
+                                            print('\r{0:4.1f}%'.format(complete), end='')
                                         sys.stdout.flush()
                                 buffer += data.decode('hex')
                         else:
                             break
                     ser.write(command('AUF','DATA','ACK'))
-                    print '{0: <25}\r'.format('\r'),
+                    print('{0: <25}\r'.format('\r'), end='')
                     wav.write(buffer)
                     wav.close()
                     jsf.close()
                 else:
                     if loop:
-                        print 'Waiting...\r',
+                        print('Waiting...\r', end=' ')
                         sys.stdout.flush()                      
                         time.sleep(config['feed_delay']/1000)
                     elif display:
-                        print
-                        print 'No more files to download.'
+                        print()
+                        print('No more files to download.')
         except KeyboardInterrupt:
-            print
+            print()
             loop = False
             ser.flushInput()
             logging.warning('Feed Mode aborted.')
@@ -1459,7 +1460,7 @@ def command_check():
         return True
 
 def web_config(data):
-    new_config=dict(urlparse.parse_qsl(data))
+    new_config=dict(urllib.parse.parse_qsl(data))
     for key, value in new_config.items():
         if key in OK_VAR:
             set_config(key, value, verbose=False)
@@ -1469,7 +1470,7 @@ def web_config(data):
             web_server(command='start',port=config['web_port'])
             
 def web_favorites(data):
-    build_favorites(dict(urlparse.parse_qsl(data)))
+    build_favorites(dict(urllib.parse.parse_qsl(data)))
 
 def server_queue():
     global volsql
@@ -1477,7 +1478,7 @@ def server_queue():
     quit=True
     try:
         task=queue.get_nowait()
-    except Queue.Empty:
+    except queue.Empty:
         idle()
     if task:
         if task['type']=='post' and task['command']=='config':
@@ -1518,16 +1519,16 @@ def server_queue():
     return quit
 
 def HP_www():
-    print 'Press Control-C to exit.'
+    print('Press Control-C to exit.')
     while True:
         try:
             task=None
             try:
                 task=queue.get_nowait()
-            except Queue.Empty:
+            except queue.Empty:
                 idle()
             if task:
-                print
+                print()
                 if task['type']=='post' and task['command']=='config':
                     web_config(task['data'])
                 if task['type']=='post' and task['command']=='favorites':
@@ -1545,11 +1546,11 @@ def HP_www():
                             HP_audio_feed(ser1, display=False, web_mode=False)
                 if task['type']=='command':
                     if task['command']=='exit':
-                        print
+                        print()
                         break
                 queue.task_done()
         except KeyboardInterrupt:         
-            print
+            print()
             break
 
 def status_mode(status):
@@ -1574,7 +1575,7 @@ def HP_monitor(ser):
     format_system(None, monitor=True, header=True, systems=False)
     while True:
         if not server_queue():
-            print
+            print()
             break
         try:
             if alternate:
@@ -1594,7 +1595,7 @@ def HP_monitor(ser):
                 format_system(status, monitor=True, header=False)
                 if config['mon_cmd']=='ON':
                     if not command_check():
-                        print
+                        print()
                         break
                 sys.stdout.flush()
                 if status['channel']: 
@@ -1619,7 +1620,7 @@ def HP_monitor(ser):
             else:
                 time.sleep(1) # Status not available. This may be a temporary, i.e. menu access on scanner, so wait a bit.
         except KeyboardInterrupt:         
-            print
+            print()
             break
         except Exception as detail:
             pass
@@ -1693,7 +1694,7 @@ def HP_rawread(ser1,ser2=None,file=None, record_time=0, timeout=3, dump=False, s
         nchannels, sampwidth, framerate, nframes, comptype, compname = i_f.getparams()
         if (nchannels!=1) and (sampwidth!=2) and (framerate!=38400):
             i_f.close()
-            print
+            print()
             logging.warning('Invalid WAV input file.')
             wavinput=false
             set_config('rd_input', None)
@@ -1721,13 +1722,13 @@ def HP_rawread(ser1,ser2=None,file=None, record_time=0, timeout=3, dump=False, s
     baud=samplesize * 75
     spb = samplesize * (16 / level)
     if not dump:
-        print '{0: >18}'.format('Raw Mode Running'),
+        print('{0: >18}'.format('Raw Mode Running'), end=' ')
         if wavinput:
-            print '{0: >18}'.format('WAV Input'),
+            print('{0: >18}'.format('WAV Input'), end=' ')
         else:
-            print '{0: >18}'.format(' '.join([str(config['rd_freq']),'hz'])),  
-        print '{0:>18}'.format('LO - TH - HI'),
-        print '{0:>18}'.format(' '.join([str(samplesize),'samples/sec']))
+            print('{0: >18}'.format(' '.join([str(config['rd_freq']),'hz'])), end=' ')  
+        print('{0:>18}'.format('LO - TH - HI'), end=' ')
+        print('{0:>18}'.format(' '.join([str(samplesize),'samples/sec'])), end=' ')
     while True:
         try:
             if not wavinput:
@@ -1783,43 +1784,43 @@ def HP_rawread(ser1,ser2=None,file=None, record_time=0, timeout=3, dump=False, s
                                 o_f.write(struct.pack('B', bb))
                     samples = []
                     if not dump:        
-                        print '{0:>18}'.format(elapsed),
-                        print '{0:>18}'.format('-'.join([str(level),'level'])),
-                        print '{0:>18}'.format(' - '.join([str(los),str(config['rd_threshold']),str(his)])),                             
-                        print '{0:>18}\r'.format('{0:08b}'.format(bb)),
+                        print('{0:>18}'.format(elapsed), end=' ')
+                        print('{0:>18}'.format('-'.join([str(level),'level'])), end=' ')
+                        print('{0:>18}'.format(' - '.join([str(los),str(config['rd_threshold']),str(his)])), end=' ') 
+                        print('{0:>18}\r'.format('{0:08b}'.format(bb)), end='')
                         sys.stdout.flush()
                     else:
-                        textfilter = ''.join([['.', chr(x)][chr(x) in string.printable[:-5]] for x in xrange(256)])
+                        textfilter = ''.join([['.', chr(x)][chr(x) in string.printable[:-5]] for x in range(256)])
                         hexdump.append(bb)
                         if len(hexdump)==8:
                             for char in hexdump:
                                 if strfmt=='text':
-                                    print chr(char).translate(textfilter),
+                                    print(chr(char).translate(textfilter), end=' ')
                                 elif strfmt in DUMP_FMT:
-                                    print DUMP_FMT[strfmt].format(char),
+                                    print(DUMP_FMT[strfmt].format(char), end=' ')
                                 else:
-                                    print DUMP_FMT['hex'].format(char),
-                            print
+                                    print(DUMP_FMT['hex'].format(char), end=' ')
+                            print()
                             sys.stdout.flush()
                             hexdump=[]
             if len(input)==0:
                 check_time=int(time.time())
                 if (check_time - lread_time) > timeout:
-                    print
-                    print
+                    print()
+                    print()
                     logging.warning('Null input counter exceeded.')
                     break
                     
             if record_time:
                 check_time=int(time.time())
                 if (check_time - start_time) > record_time:
-                    print
-                    print
+                    print()
+                    print()
                     logging.warning('Recording time limit reached.')
                     break
         except KeyboardInterrupt:
-            print
-            print
+            print()
+            print()
             logging.warning('Raw mode aborted.')
             break
     if file=='ON':
@@ -1846,22 +1847,22 @@ def version_check():
         update=None
         doy=int(fn_dt(datetime.datetime.now(), format='%j'))
         if doy % config['update_check']==0:
-            print 'Checking for updates...',
+            print('Checking for updates...', end=' ')
             import urllib2
             try:
                 request = urllib2.Request(defs.UPDATE_CHECK, headers={'User-Agent' : version_string()}) 
                 response = urllib2.urlopen(request).read()
                 update=json.loads(response)
             except Exception as detail:  
-                print
+                print()
                 logging.error(detail)
                 update=None
         if update:
             if update['version'] != defs.VERSION:
-                print ' '.join([version_string(version=update['version']), 'is available.'])
+                print(' '.join([version_string(version=update['version']), 'is available.']))
             else:
-                print ' '.join([defs.PROGRAM, 'is up-to-date.'])
-        print
+                print(' '.join([defs.PROGRAM, 'is up-to-date.']))
+        print()
 
 def check_path(path, filename):
     if not os.path.isdir(path):
@@ -1875,7 +1876,7 @@ def save_config(set=defs.PROGRAM):
     if set=='':
         set=defs.PROGRAM
     cfgfilename = check_path(config['cfg_path'], '.'.join([defs.PROGRAM,'cfg']))
-    Config = ConfigParser.RawConfigParser(config,allow_no_value=True)    
+    Config = configparser.RawConfigParser(config,allow_no_value=True)    
     try:
         Config.read(cfgfilename)
     except:
@@ -1900,7 +1901,7 @@ def load_config(set=defs.PROGRAM, check_only=False):
     if set=='':
         set=defs.PROGRAM
     cfgfilename = check_path(config['cfg_path'], '.'.join([defs.PROGRAM,'cfg']))
-    Config = ConfigParser.RawConfigParser(config,allow_no_value=True)
+    Config = configparser.RawConfigParser(config,allow_no_value=True)
     try:
         Config.read(cfgfilename)
     except:
@@ -1911,7 +1912,7 @@ def load_config(set=defs.PROGRAM, check_only=False):
         try:
             for key in OK_VAR:
                 set_config(key, Config.get(set,key), verbose=False)
-        except ConfigParser.Error:
+        except configparser.Error:
             logging.error('Config set not found.')
             return
         config['config_name'] = set
@@ -1930,7 +1931,7 @@ def set_log():
             console.setFormatter(formatter)
             logging.getLogger('').addHandler(console)
         except IOError as detail:
-            print
+            print()
             logging.basicConfig(level=config['loglevel'],format='%(levelname)s: %(message)s')
             logging.error(detail)
     else:
@@ -1943,7 +1944,7 @@ def parse_arguments():
     if args.set:
         for set_cmd in args.set:
             HP_CMD().onecmd(' '.join(['set', set_cmd]))
-        print
+        print()
 
 def console_check():
     if hasattr(sys, "frozen"):
@@ -2021,15 +2022,19 @@ if __name__ == '__main__':
     #version_check()
     parse_arguments()
 
-if console_check():
-    try:
-        HP_CMD().cmdloop()
-    except KeyboardInterrupt:
-        print
-    except Exception as detail:  
-        logging.error(detail)
-    finally:
-        HP_CMD().onecmd('bye')
-else:
-    HP_CMD().onecmd('web')
-    #util.windowsMessageBox(defs.PROGRAM, version_string())
+def main():
+    if console_check():
+        try:
+            HP_CMD().cmdloop()
+        except KeyboardInterrupt:
+            print()
+        except Exception as detail:
+            logging.error(detail)
+        finally:
+            HP_CMD().onecmd('bye')
+    else:
+        HP_CMD().onecmd('web')
+        #util.windowsMessageBox(defs.PROGRAM, version_string())
+
+if __name__ == '__main__':
+    main()
